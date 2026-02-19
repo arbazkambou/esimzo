@@ -50,20 +50,15 @@ export interface NormalizedPlan {
   additionalInfo: string | null;
 }
 
-// ─── Adapter interface ───────────────────────────────────────────
+// ─── Adapter (plain object with functions) ───────────────────────
 
 export interface ProviderAdapter {
-  /** Unique slug for this provider (e.g. "airalo") */
   providerSlug: string;
-
-  /** Fetch and return normalized provider info */
-  fetchProvider(): Promise<NormalizedProvider>;
-
-  /** Fetch all plans and return them normalized */
-  fetchPlans(): Promise<NormalizedPlan[]>;
+  fetchProvider: () => Promise<NormalizedProvider>;
+  fetchPlans: () => Promise<NormalizedPlan[]>;
 }
 
-// ─── Sync result (returned by SyncEngine) ────────────────────────
+// ─── Sync result ─────────────────────────────────────────────────
 
 export interface SyncResult {
   provider: string;

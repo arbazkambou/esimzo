@@ -1,18 +1,14 @@
-import { AiraloAdapter } from "./adapters/airalo.adapter";
-import { SyncEngine } from "./sync-engine";
+import { airaloAdapter } from "./adapters/airalo.adapter";
 import type { ProviderAdapter } from "./types";
 
 // ─── Adapter Registry ────────────────────────────────────────────
 // Add new adapters here as you build them.
 
-const adapters: ProviderAdapter[] = [
-  new AiraloAdapter(),
-  // new YesimAdapter(),
+export const adapters: ProviderAdapter[] = [
+  airaloAdapter,
+  // yesimAdapter,
 ];
 
-// ─── Export a ready-to-use engine ────────────────────────────────
-
-export const syncEngine = new SyncEngine(adapters);
-
-// Re-export types
+// Re-export
+export { syncOne, syncAll } from "./sync-engine";
 export type { SyncResult, ProviderAdapter } from "./types";

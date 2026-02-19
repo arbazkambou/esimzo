@@ -1,4 +1,4 @@
-import type { ProviderAdapter, NormalizedProvider, NormalizedPlan } from "../types";
+import type { ProviderAdapter, NormalizedPlan } from "../types";
 import {
   buildPlanSlug,
   convertToMB,
@@ -34,94 +34,86 @@ interface AiraloRawPlan {
     voice: { inbound: boolean; outbound: boolean };
     sms: { inbound: boolean; outbound: boolean };
   } | null;
-  // Fields we ignore: url, activationPolicy, otherInfo, dataCap, dataUnit, dataCapPer, planType
 }
 
 // ─── Config ──────────────────────────────────────────────────────
 
 const PROVIDER_SLUG = "airalo";
+const AIRALO_API_URL =
+  process.env.AIRALO_API_URL || "https://www.airalo.com/api/plans";
 
-// TODO: Replace with real Airalo API endpoint + auth
-const AIRALO_API_URL = process.env.AIRALO_API_URL || "https://www.airalo.com/api/plans";
+// ─── Fetch raw plans from Airalo ─────────────────────────────────
 
-// ─── Adapter ─────────────────────────────────────────────────────
+const fetchFromAPI = async (): Promise<AiraloRawPlan[]> => {
+  const res = await fetch(AIRALO_API_URL, {
+    headers: { Accept: "application/json" },
+  });
 
-export class AiraloAdapter implements ProviderAdapter {
-  providerSlug = PROVIDER_SLUG;
-
-  async fetchProvider(): Promise<NormalizedProvider> {
-    return {
-      name: "Airalo",
-      slug: PROVIDER_SLUG,
-      info: "Airalo offers affordable eSIMs for 200+ countries and regions worldwide.",
-      image: null,
-      certified: true,
-    };
+  if (!res.ok) {
+    throw new Error(
+      `Airalo API responded with ${res.status}: ${res.statusText}`
+    );
   }
 
-  async fetchPlans(): Promise<NormalizedPlan[]> {
-    // TODO: Replace with real API call
-    // const res = await fetch(`${AIRALO_API_URL}/plans`, {
-    //   headers: { Authorization: `Bearer ${AIRALO_API_TOKEN}` },
-    // });
-    // const rawPlans: AiraloRawPlan[] = await res.json();
+  return res.json() as Promise<AiraloRawPlan[]>;
+};
 
-    const rawPlans = await this.fetchFromAPI();
+// ─── Normalize a single Airalo plan to our shape ─────────────────
 
-    return rawPlans.map((raw) => this.normalize(raw));
-  }
+const normalize = (raw: AiraloRawPlan): NormalizedPlan => {
+  const capacityMB = convertToMB(raw.capacity, raw.capacityUnit);
 
-  // ── Private ────────────────────────────────────────────────────
+  return {
+    ...defaultPlan(),
 
-  private async fetchFromAPI(): Promise<AiraloRawPlan[]> {
-    const res = await fetch(AIRALO_API_URL, {
-      headers: {
-        Accept: "application/json",
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`Airalo API responded with ${res.status}: ${res.statusText}`);
-    }
-
-    return res.json() as Promise<AiraloRawPlan[]>;
-  }
-
-  private normalize(raw: AiraloRawPlan): NormalizedPlan {
-    const plan = defaultPlan();
-
-    plan.name = raw.planName;
-    const capacityMB = convertToMB(raw.capacity, raw.capacityUnit);
-    plan.slug = buildPlanSlug(PROVIDER_SLUG, raw.planName, capacityMB, raw.period);
+    name: raw.planName,
+    slug: buildPlanSlug(PROVIDER_SLUG, raw.planName, capacityMB, raw.period),
 
     // Pricing
-    plan.usdPrice = raw.price;
-    plan.prices = { USD: raw.price, ...raw.prices };
+    usdPrice: raw.price,
+    prices: { USD: raw.price, ...raw.prices },
 
     // Data & Validity
-    plan.capacity = convertToMB(raw.capacity, raw.capacityUnit);
-    plan.capacityInfo = raw.capacityInfo;
-    plan.period = raw.period;
+    capacity: capacityMB,
+    capacityInfo: raw.capacityInfo,
+    period: raw.period,
 
     // Speed
-    plan.reducedSpeed = raw.reducedSpeed;
+    reducedSpeed: raw.reducedSpeed,
 
     // Features
-    plan.has5G = has5GInCoverages(raw.coverages);
-    plan.tethering = true; // Airalo allows tethering by default
-    plan.canTopUp = raw.rechargeability;
-    plan.phoneNumber = raw.phoneNumber;
-    plan.subscription = raw.billingType === "subscription";
-    plan.newUserOnly = raw.newUserOnly;
-    plan.eKYC = raw.isKycVerify;
+    has5G: has5GInCoverages(raw.coverages),
+    tethering: true,
+    canTopUp: raw.rechargeability,
+    phoneNumber: raw.phoneNumber,
+    subscription: raw.billingType === "subscription",
+    newUserOnly: raw.newUserOnly,
+    eKYC: raw.isKycVerify,
 
     // Complex / Nested
-    plan.telephony = raw.telephony;
-    plan.coverages = raw.coverages;
+    telephony: raw.telephony,
+    coverages: raw.coverages,
 
     // Meta
-    plan.additionalInfo = raw.info ? raw.info.join("\n") : null;
+    additionalInfo: raw.info ? raw.info.join("\n") : null,
+  };
+};
 
-    return plan;
-  }
-}
+// ─── Adapter (plain object) ──────────────────────────────────────
+
+export const airaloAdapter: ProviderAdapter = {
+  providerSlug: PROVIDER_SLUG,
+
+  fetchProvider: async () => ({
+    name: "Airalo",
+    slug: PROVIDER_SLUG,
+    info: "Airalo offers affordable eSIMs for 200+ countries and regions worldwide.",
+    image: null,
+    certified: true,
+  }),
+
+  fetchPlans: async () => {
+    const rawPlans = await fetchFromAPI();
+    return rawPlans.map(normalize);
+  },
+};

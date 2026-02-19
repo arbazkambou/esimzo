@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { syncAll, syncOne } from "../controllers/sync.controller";
+import { handleSyncAll, handleSyncOne } from "../controllers/sync.controller";
 
 const router = Router();
 
 // POST /api/sync         — sync all providers
-router.post("/", syncAll);
+router.post("/", handleSyncAll);
 
 // POST /api/sync/:provider — sync a single provider (e.g. /api/sync/airalo)
-router.post("/:provider", syncOne);
+router.post("/:provider", handleSyncOne);
 
 export default router;

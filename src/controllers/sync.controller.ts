@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
-import { syncEngine } from "../sync";
+import { adapters, syncAll, syncOne } from "../sync";
 import { asyncHandler, ApiResponse } from "../types";
 
 // ─── POST /api/sync — run all providers ─────────────────────────
 
-export const syncAll = asyncHandler(
+export const handleSyncAll = asyncHandler(
   async (_req: Request, res: Response) => {
-    const results = await syncEngine.runAll();
+    const results = await syncAll(adapters);
 
     const response: ApiResponse = {
       success: results.every((r) => !r.error),
@@ -19,12 +19,10 @@ export const syncAll = asyncHandler(
 
 // ─── POST /api/sync/:provider — run a single provider ───────────
 
-export const syncOne = asyncHandler(
+export const handleSyncOne = asyncHandler(
   async (req: Request, res: Response) => {
     const { provider } = req.params;
 
-    // Find the adapter by slug
-    const adapters = (syncEngine as any).adapters as Array<{ providerSlug: string }>;
     const adapter = adapters.find((a) => a.providerSlug === provider);
 
     if (!adapter) {
@@ -36,7 +34,7 @@ export const syncOne = asyncHandler(
       return;
     }
 
-    const result = await syncEngine.runOne(adapter as any);
+    const result = await syncOne(adapter);
 
     const response: ApiResponse = {
       success: !result.error,
