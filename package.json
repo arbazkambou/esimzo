@@ -11,6 +11,9 @@
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:studio": "npx prisma studio"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
