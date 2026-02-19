@@ -48,3 +48,72 @@ model Country {
 
   @@map("countries")
 }
+
+// ─── Provider ────────────────────────────────────────────────────
+
+model Provider {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  info       String?              // provider description
+  image      String?              // logo URL
+  certified  Boolean  @default(false)
+  popularity Int      @default(0)
+  planCount  Int      @default(0) @map("plan_count")
+  plans      Plan[]
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("providers")
+}
+
+// ─── Plan ────────────────────────────────────────────────────────
+
+model Plan {
+  id                 String   @id @default(cuid())
+  name               String
+  slug               String   @unique
+
+  // ── Pricing ──
+  usdPrice           Float    @default(0) @map("usd_price")
+  prices             Json     @default("{}")         // { "USD": 0, "EUR": 5.99 }
+  priceInfo          String?  @map("price_info")
+
+  // ── Data & Validity ──
+  capacity           Int                              // data in MB
+  capacityInfo       String?  @map("capacity_info")
+  period             Int                              // validity in days
+  validityInfo       String?  @map("validity_info")
+
+  // ── Speed ──
+  speedLimit         Int?     @map("speed_limit")
+  reducedSpeed       Int?     @map("reduced_speed")
+  possibleThrottling Boolean  @default(false) @map("possible_throttling")
+  isLowLatency       Boolean  @default(false) @map("is_low_latency")
+
+  // ── Features ──
+  has5G              Boolean  @default(false) @map("has_5g")
+  tethering          Boolean  @default(false)
+  canTopUp           Boolean  @default(false) @map("can_top_up")
+  phoneNumber        Boolean  @default(false) @map("phone_number")
+  subscription       Boolean  @default(false)
+  subscriptionPeriod Int?     @map("subscription_period")
+  payAsYouGo         Boolean  @default(false) @map("pay_as_you_go")
+  newUserOnly        Boolean  @default(false) @map("new_user_only")
+  isConsecutive      Boolean  @default(false) @map("is_consecutive")
+  eKYC               Boolean? @map("e_kyc")
+
+  // ── Complex / Nested (JSON) ──
+  telephony          Json?                            // { dialingCode, voice, sms }
+  coverages          Json     @default("[]")          // [{ name, code, networks }]
+  internetBreakouts  Json     @default("[]") @map("internet_breakouts") // [{ country }]
+
+  // ── Meta ──
+  additionalInfo     String?  @map("additional_info")
+  providerId         String   @map("provider_id")
+  provider           Provider @relation(fields: [providerId], references: [id])
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("plans")
+}
