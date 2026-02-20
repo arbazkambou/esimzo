@@ -8,6 +8,7 @@ import providerRoutes from "./provider.routes";
 import statsRoutes from "./stats.routes";
 import { prisma } from "../lib/prisma";
 import { asyncHandler, ApiResponse } from "../types";
+import { cacheMiddleware } from "../lib/cache";
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.use("/stats", statsRoutes);
 
 router.get(
   "/countries/:code/plans",
+  cacheMiddleware(),
   asyncHandler(async (req: Request, res: Response) => {
     const code = (req.params.code as string).toUpperCase();
 
@@ -65,6 +67,7 @@ router.get(
 
 router.get(
   "/regions/:slug/plans",
+  cacheMiddleware(),
   asyncHandler(async (req: Request, res: Response) => {
     const slug = req.params.slug as string;
 

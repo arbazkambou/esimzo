@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { adapters, syncAll, syncOne } from "../sync";
 import { asyncHandler, ApiResponse } from "../types";
+import { invalidateCache } from "../lib/cache";
 
 // ─── POST /api/sync — run all providers ─────────────────────────
 
@@ -35,6 +36,9 @@ export const handleSyncOne = asyncHandler(
     }
 
     const result = await syncOne(adapter);
+
+    // Clear cache since data changed
+    invalidateCache();
 
     const response: ApiResponse = {
       success: !result.error,

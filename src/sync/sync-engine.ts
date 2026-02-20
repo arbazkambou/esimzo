@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { invalidateCache } from "../lib/cache";
 import type { ProviderAdapter, SyncResult } from "./types";
 
 // ─── Deduplicate slugs ───────────────────────────────────────────
@@ -136,6 +137,9 @@ export const syncAll = async (
     const result = await syncOne(adapter);
     results.push(result);
   }
+
+  // Flush cache so fresh data is served
+  invalidateCache();
 
   return results;
 };
