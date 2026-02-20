@@ -43,6 +43,17 @@
             "method": "GET",
             "url": "{{baseUrl}}/countries"
           }
+        },
+        {
+          "name": "Get Plans for Country",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/countries/pk/plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["countries", "pk", "plans"]
+            }
+          }
         }
       ]
     },
@@ -57,10 +68,17 @@
           }
         },
         {
-          "name": "Sync Single Provider",
+          "name": "Sync Airalo",
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/sync/airalo"
+          }
+        },
+        {
+          "name": "Sync Yesim",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sync/yesim"
           }
         }
       ]
@@ -215,6 +233,66 @@
                 { "key": "limit", "value": "10" }
               ]
             }
+          }
+        },
+        {
+          "name": "Get Plan by Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans/airalo-example-plan-1024mb-30d",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans", "airalo-example-plan-1024mb-30d"]
+            }
+          }
+        },
+        {
+          "name": "Compare Plans",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans/compare?slugs=slug-1,slug-2,slug-3",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans", "compare"],
+              "query": [
+                { "key": "slugs", "value": "slug-1,slug-2,slug-3", "description": "Comma-separated plan slugs (max 5)" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Providers",
+      "item": [
+        {
+          "name": "Get All Providers",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/providers"
+          }
+        },
+        {
+          "name": "Get Provider by Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/providers/airalo",
+              "host": ["{{baseUrl}}"],
+              "path": ["providers", "airalo"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "item": [
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/stats"
           }
         }
       ]

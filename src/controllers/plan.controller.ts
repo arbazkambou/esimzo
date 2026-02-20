@@ -119,3 +119,72 @@ export const getPlans = asyncHandler(
     res.json(response);
   }
 );
+
+// ─── GET /api/plans/compare?slugs=slug1,slug2 ───────────────────
+
+export const comparePlans = asyncHandler(
+  async (req: Request, res: Response) => {
+    const slugsParam = req.query.slugs;
+    const slugs = typeof slugsParam === "string" ? slugsParam : undefined;
+
+    if (!slugs) {
+      const response: ApiResponse = {
+        success: false,
+        error: "Provide ?slugs=slug1,slug2 (comma-separated, max 5)",
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const slugList = slugs.split(",").slice(0, 5);
+
+    const plans = await prisma.plan.findMany({
+      where: { slug: { in: slugList } },
+      include: {
+        provider: {
+          select: { name: true, slug: true, image: true },
+        },
+      },
+    });
+
+    const response: ApiResponse = {
+      success: true,
+      data: plans,
+    };
+
+    res.json(response);
+  }
+);
+
+// ─── GET /api/plans/:slug — single plan detail ──────────────────
+
+export const getPlanBySlug = asyncHandler(
+  async (req: Request, res: Response) => {
+    const slug = req.params.slug as string;
+
+    const plan = await prisma.plan.findUnique({
+      where: { slug },
+      include: {
+        provider: {
+          select: { name: true, slug: true, image: true, info: true },
+        },
+      },
+    });
+
+    if (!plan) {
+      const response: ApiResponse = {
+        success: false,
+        error: `Plan "${slug}" not found`,
+      };
+      res.status(404).json(response);
+      return;
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      data: plan,
+    };
+
+    res.json(response);
+  }
+);
