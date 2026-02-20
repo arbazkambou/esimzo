@@ -7,14 +7,18 @@ import type { ProviderAdapter, SyncResult } from "./types";
 const deduplicateSlugs = (
   plans: Array<{ slug: string }>
 ): void => {
-  const counts = new Map<string, number>();
+  const seen = new Set<string>();
 
   for (const plan of plans) {
-    const count = counts.get(plan.slug) ?? 0;
-    if (count > 0) {
-      plan.slug = `${plan.slug}-${count + 1}`;
+    let originalSlug = plan.slug;
+    let count = 1;
+
+    while (seen.has(plan.slug)) {
+      count++;
+      plan.slug = `${originalSlug}-${count}`;
     }
-    counts.set(plan.slug, count + 1);
+
+    seen.add(plan.slug);
   }
 };
 
@@ -99,7 +103,7 @@ export const syncOne = async (
 
         return { deleted: deleted.count, inserted: created.count };
       },
-      { timeout: 30_000 } // 30s for large plan sets
+      { timeout: 300_000 } // 5 minutes for large plan sets
     );
 
     console.log(

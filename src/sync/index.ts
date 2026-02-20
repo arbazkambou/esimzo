@@ -1,6 +1,8 @@
 import { airaloAdapter } from "./adapters/airalo.adapter";
 import { yesimAdapter } from "./adapters/yesim.adapter";
 import { voyeglobalAdapter } from "./adapters/voyeglobal.adapter";
+import { esimcardAdapter } from "./adapters/esimcard.adapter";
+import { yaaloAdapter } from "./adapters/yaalo.adapter";
 import type { ProviderAdapter } from "./types";
 
 // ─── Adapter Registry ────────────────────────────────────────────
@@ -10,6 +12,8 @@ export const adapters: ProviderAdapter[] = [
   airaloAdapter,
   yesimAdapter,
   voyeglobalAdapter,
+  esimcardAdapter,
+  yaaloAdapter,
 ];
 
 // Re-export
