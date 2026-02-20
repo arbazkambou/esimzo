@@ -3,6 +3,7 @@ import userRoutes from "./user.routes";
 import countryRoutes from "./country.routes";
 import regionRoutes from "./region.routes";
 import syncRoutes from "./sync.routes";
+import planRoutes from "./plan.routes";
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use("/users", userRoutes);
 router.use("/countries", countryRoutes);
 router.use("/regions", regionRoutes);
 router.use("/sync", syncRoutes);
+router.use("/plans", planRoutes);
 
 export default router;

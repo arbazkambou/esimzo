@@ -1,0 +1,223 @@
+{
+  "info": {
+    "name": "esimzo API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Regions",
+      "item": [
+        {
+          "name": "Get All Regions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/regions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Countries",
+      "item": [
+        {
+          "name": "Get All Countries",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/countries"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sync",
+      "item": [
+        {
+          "name": "Sync All Providers",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sync"
+          }
+        },
+        {
+          "name": "Sync Single Provider",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sync/airalo"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Plans",
+      "item": [
+        {
+          "name": "Get All Plans",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"]
+            }
+          }
+        },
+        {
+          "name": "Filter by Country",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans?country=pk",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"],
+              "query": [
+                { "key": "country", "value": "pk", "description": "ISO country code (e.g. pk, us, ch)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Provider",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans?provider=airalo",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"],
+              "query": [
+                { "key": "provider", "value": "airalo", "description": "Provider slug (airalo, yesim)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Price Range",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans?minPrice=5&maxPrice=20&sort=price&order=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"],
+              "query": [
+                { "key": "minPrice", "value": "5", "description": "Minimum USD price" },
+                { "key": "maxPrice", "value": "20", "description": "Maximum USD price" },
+                { "key": "sort", "value": "price", "description": "Sort by: price, data, period" },
+                { "key": "order", "value": "asc", "description": "Order: asc or desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Data Capacity",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans?minData=1024&maxData=10240",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"],
+              "query": [
+                { "key": "minData", "value": "1024", "description": "Minimum capacity in MB (1024 = 1GB)" },
+                { "key": "maxData", "value": "10240", "description": "Maximum capacity in MB (10240 = 10GB)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Duration",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans?minDays=7&maxDays=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"],
+              "query": [
+                { "key": "minDays", "value": "7", "description": "Minimum validity in days" },
+                { "key": "maxDays", "value": "30", "description": "Maximum validity in days" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Only 5G Plans",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans?has5g=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"],
+              "query": [
+                { "key": "has5g", "value": "true", "description": "Only show 5G plans" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlimited Data Plans",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans?unlimited=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"],
+              "query": [
+                { "key": "unlimited", "value": "true", "description": "Only show unlimited data plans" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "With Pagination",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans?page=2&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"],
+              "query": [
+                { "key": "page", "value": "2", "description": "Page number (default: 1)" },
+                { "key": "limit", "value": "10", "description": "Items per page, max 100 (default: 20)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Combined Filters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/plans?country=pk&maxPrice=15&minData=1024&sort=price&order=asc&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["plans"],
+              "query": [
+                { "key": "country", "value": "pk" },
+                { "key": "maxPrice", "value": "15" },
+                { "key": "minData", "value": "1024" },
+                { "key": "sort", "value": "price" },
+                { "key": "order", "value": "asc" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
