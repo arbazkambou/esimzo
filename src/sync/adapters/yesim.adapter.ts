@@ -42,13 +42,33 @@ const fetchFromAPI = async (): Promise<YesimRawPlan[]> => {
   return res.json() as Promise<YesimRawPlan[]>;
 };
 
+// ─── Fetch live exchange rate ──────────────────────────────────────
+
+const fetchEurToUsdRate = async (): Promise<number> => {
+  try {
+    const res = await fetch(
+      "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json"
+    );
+    if (!res.ok) throw new Error("Failed to fetch exchange rate");
+    
+    const data = await res.json() as { eur: { usd: number } };
+    return data.eur.usd;
+  } catch (err) {
+    console.warn("⚠️ [Yesim] Failed to fetch live EUR/USD rate, falling back to 1.08");
+    return 1.08; // Safe fallback
+  }
+};
+
 // ─── Normalize a single Yesim plan to our shape ──────────────────
 
-const normalize = (raw: YesimRawPlan): NormalizedPlan => {
+const normalize = (raw: YesimRawPlan, eurToUsdRate: number): NormalizedPlan => {
   const period = parseInt(raw.period, 10) || 0;
   const rawCapacity = parseInt(raw.capacity, 10);
   const isUnlimited = rawCapacity === -1;
   const capacityMB = isUnlimited ? 0 : convertToMB(rawCapacity, raw.capacityUnit);
+
+  const eurPrice = parseFloat(raw.price);
+  const usdPrice = parseFloat((eurPrice * eurToUsdRate).toFixed(2));
 
   return {
     ...defaultPlan(),
@@ -56,9 +76,12 @@ const normalize = (raw: YesimRawPlan): NormalizedPlan => {
     name: raw.planName,
     slug: buildPlanSlug(PROVIDER_SLUG, raw.planName, capacityMB, period),
 
-    // Pricing (Yesim uses EUR, store raw price as-is)
-    usdPrice: parseFloat(raw.price),
-    prices: raw.prices,
+    // Pricing
+    usdPrice,
+    prices: {
+      ...raw.prices,
+      EUR: eurPrice.toString(), // Keep original EUR price for reference
+    },
     priceInfo: raw.priceInfo || null,
 
     // Data & Validity
@@ -90,7 +113,12 @@ export const yesimAdapter: ProviderAdapter = {
   }),
 
   fetchPlans: async () => {
+    // Fetch exchange rate ONCE per sync
+    const eurToUsdRate = await fetchEurToUsdRate();
+    console.log(`💶 [Yesim] Live exchange rate: 1 EUR = ${eurToUsdRate} USD`);
+
     const rawPlans = await fetchFromAPI();
-    return rawPlans.map(normalize);
+    
+    return rawPlans.map(plan => normalize(plan, eurToUsdRate));
   },
 };
