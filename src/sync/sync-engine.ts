@@ -50,53 +50,56 @@ export const syncOne = async (
     });
 
     // 3. Transaction: delete → dedupe slugs → insert → update count
-    const result = await prisma.$transaction(async (tx) => {
-      const deleted = await tx.plan.deleteMany({
-        where: { providerId: provider.id },
-      });
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const deleted = await tx.plan.deleteMany({
+          where: { providerId: provider.id },
+        });
 
-      deduplicateSlugs(plans);
+        deduplicateSlugs(plans);
 
-      const created = await tx.plan.createMany({
-        data: plans.map((plan) => ({
-          name: plan.name,
-          slug: plan.slug,
-          usdPrice: plan.usdPrice,
-          prices: plan.prices as any,
-          priceInfo: plan.priceInfo,
-          capacity: plan.capacity,
-          capacityInfo: plan.capacityInfo,
-          period: plan.period,
-          validityInfo: plan.validityInfo,
-          speedLimit: plan.speedLimit,
-          reducedSpeed: plan.reducedSpeed,
-          possibleThrottling: plan.possibleThrottling,
-          isLowLatency: plan.isLowLatency,
-          has5G: plan.has5G,
-          tethering: plan.tethering,
-          canTopUp: plan.canTopUp,
-          phoneNumber: plan.phoneNumber,
-          subscription: plan.subscription,
-          subscriptionPeriod: plan.subscriptionPeriod,
-          payAsYouGo: plan.payAsYouGo,
-          newUserOnly: plan.newUserOnly,
-          isConsecutive: plan.isConsecutive,
-          eKYC: plan.eKYC,
-          telephony: plan.telephony as any,
-          coverages: plan.coverages as any,
-          internetBreakouts: plan.internetBreakouts as any,
-          additionalInfo: plan.additionalInfo,
-          providerId: provider.id,
-        })),
-      });
+        const created = await tx.plan.createMany({
+          data: plans.map((plan) => ({
+            name: plan.name,
+            slug: plan.slug,
+            usdPrice: plan.usdPrice,
+            prices: plan.prices as any,
+            priceInfo: plan.priceInfo,
+            capacity: plan.capacity,
+            capacityInfo: plan.capacityInfo,
+            period: plan.period,
+            validityInfo: plan.validityInfo,
+            speedLimit: plan.speedLimit,
+            reducedSpeed: plan.reducedSpeed,
+            possibleThrottling: plan.possibleThrottling,
+            isLowLatency: plan.isLowLatency,
+            has5G: plan.has5G,
+            tethering: plan.tethering,
+            canTopUp: plan.canTopUp,
+            phoneNumber: plan.phoneNumber,
+            subscription: plan.subscription,
+            subscriptionPeriod: plan.subscriptionPeriod,
+            payAsYouGo: plan.payAsYouGo,
+            newUserOnly: plan.newUserOnly,
+            isConsecutive: plan.isConsecutive,
+            eKYC: plan.eKYC,
+            telephony: plan.telephony as any,
+            coverages: plan.coverages as any,
+            internetBreakouts: plan.internetBreakouts as any,
+            additionalInfo: plan.additionalInfo,
+            providerId: provider.id,
+          })),
+        });
 
-      await tx.provider.update({
-        where: { id: provider.id },
-        data: { planCount: created.count },
-      });
+        await tx.provider.update({
+          where: { id: provider.id },
+          data: { planCount: created.count },
+        });
 
-      return { deleted: deleted.count, inserted: created.count };
-    });
+        return { deleted: deleted.count, inserted: created.count };
+      },
+      { timeout: 30_000 } // 30s for large plan sets
+    );
 
     console.log(
       `✅ [${adapter.providerSlug}] Synced: ${result.deleted} deleted, ${result.inserted} inserted (${Date.now() - start}ms)`

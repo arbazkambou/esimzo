@@ -1,4 +1,5 @@
 import { airaloAdapter } from "./adapters/airalo.adapter";
+import { yesimAdapter } from "./adapters/yesim.adapter";
 import type { ProviderAdapter } from "./types";
 
 // ─── Adapter Registry ────────────────────────────────────────────
@@ -6,7 +7,7 @@ import type { ProviderAdapter } from "./types";
 
 export const adapters: ProviderAdapter[] = [
   airaloAdapter,
-  // yesimAdapter,
+  yesimAdapter,
 ];
 
 // Re-export
