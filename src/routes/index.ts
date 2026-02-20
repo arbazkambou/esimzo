@@ -58,4 +58,73 @@ router.get(
   })
 );
 
+// ─── GET /api/regions/:slug/plans ────────────────────────────────
+// Returns multi-country plans that cover a region.
+// A plan counts as a "region plan" if its coverages include at
+// least half of the region's countries (e.g. 22/44 for Europe).
+
+router.get(
+  "/regions/:slug/plans",
+  asyncHandler(async (req: Request, res: Response) => {
+    const slug = req.params.slug as string;
+
+    // 1. Find region + all its country codes
+    const region = await prisma.region.findUnique({
+      where: { slug },
+      include: {
+        countries: { select: { code: true } },
+      },
+    });
+
+    if (!region) {
+      const response: ApiResponse = {
+        success: false,
+        error: `Region "${slug}" not found`,
+      };
+      res.status(404).json(response);
+      return;
+    }
+
+    const regionCodes = new Set(
+      region.countries.map((c) => c.code.toUpperCase())
+    );
+    const threshold = Math.ceil(regionCodes.size / 2); // 50%+
+
+    // 2. Fetch plans that cover at least ONE country in this region
+    const candidates = await prisma.plan.findMany({
+      where: {
+        OR: Array.from(regionCodes).slice(0, 5).map((code) => ({
+          coverages: { array_contains: [{ code }] },
+        })),
+      },
+      include: {
+        provider: {
+          select: { name: true, slug: true, image: true },
+        },
+      },
+    });
+
+    // 3. Keep only plans that cover 50%+ of the region's countries
+    const plans = candidates
+      .filter((plan) => {
+        const planCodes = (plan.coverages as Array<{ code: string }>).map(
+          (c) => c.code.toUpperCase()
+        );
+        const overlap = planCodes.filter((c) => regionCodes.has(c)).length;
+        return overlap >= threshold;
+      })
+      .sort((a, b) => a.usdPrice - b.usdPrice);
+
+    const response: ApiResponse = {
+      success: true,
+      data: plans,
+      meta: {
+        total: plans.length,
+      },
+    };
+
+    res.json(response);
+  })
+);
+
 export default router;
