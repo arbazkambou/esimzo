@@ -7,11 +7,14 @@ import { invalidateCache } from "../lib/cache";
 
 export const handleSyncAll = asyncHandler(
   async (_req: Request, res: Response) => {
-    const results = await syncAll(adapters);
+    // Fire and forget to prevent Render 502 Timeout
+    syncAll(adapters).catch((err) => {
+      console.error("❌ Background syncAll failed:", err);
+    });
 
     const response: ApiResponse = {
-      success: results.every((r) => !r.error),
-      data: results,
+      success: true,
+      data: { message: "Sync started in background. Monitor server logs for completion." },
     };
 
     res.json(response);
@@ -35,14 +38,19 @@ export const handleSyncOne = asyncHandler(
       return;
     }
 
-    const result = await syncOne(adapter);
-
-    // Clear cache since data changed
-    invalidateCache();
+    // Fire and forget to prevent Render 502 Timeout
+    syncOne(adapter)
+      .then(() => {
+        // Clear cache since data changed
+        invalidateCache();
+      })
+      .catch((err) => {
+        console.error(`❌ Background syncOne [${provider}] failed:`, err);
+      });
 
     const response: ApiResponse = {
-      success: !result.error,
-      data: result,
+      success: true,
+      data: { message: `Sync for ${provider} started in background. Monitor logs for results.` },
     };
 
     res.json(response);
