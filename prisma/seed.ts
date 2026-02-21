@@ -83,6 +83,31 @@ const COUNTRY_TO_REGION: Record<string, string> = {
 
 const SKIP_CODES = new Set(["eu", "un"]);
 
+// ─── Popular Countries mapping (Code -> Score) ───────────────────
+
+const POPULAR_COUNTRIES: Record<string, number> = {
+  US: 100, // United States
+  GB: 99,  // United Kingdom
+  TR: 98,  // Turkey
+  JP: 97,  // Japan
+  CH: 96,  // Switzerland
+  IT: 95,  // Italy
+  FR: 94,  // France
+  ES: 93,  // Spain
+  DE: 92,  // Germany
+  TH: 91,  // Thailand
+  AE: 90,  // United Arab Emirates
+  SG: 89,  // Singapore
+  CA: 88,  // Canada
+  MX: 87,  // Mexico
+  AU: 86,  // Australia
+  KR: 85,  // South Korea
+  VN: 84,  // Vietnam
+  ID: 83,  // Indonesia
+  CN: 82,  // China
+  IN: 81,  // India
+};
+
 // ─── Main ─────────────────────────────────────────────────────────
 
 async function main() {
@@ -126,12 +151,13 @@ async function main() {
     const slug = slugify(name);
     const regionCode = COUNTRY_TO_REGION[upperCode];
     const regionId = regionCode ? regionIdMap[regionCode] : undefined;
+    const popularity = POPULAR_COUNTRIES[upperCode] || 0;
 
     try {
       await prisma.country.upsert({
         where: { code: upperCode },
-        update: { name, slug, flag, regionId: regionId ?? null },
-        create: { name, slug, code: upperCode, flag, regionId: regionId ?? null },
+        update: { name, slug, flag, popularity, regionId: regionId ?? null },
+        create: { name, slug, code: upperCode, flag, popularity, regionId: regionId ?? null },
       });
       created++;
     } catch (err) {
