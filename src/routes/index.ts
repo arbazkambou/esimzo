@@ -28,13 +28,31 @@ router.use("/plans", planRoutes);
 router.use("/providers", providerRoutes);
 router.use("/stats", statsRoutes);
 
-// ─── GET /api/countries/:code/plans ──────────────────────────────
+// ─── GET /api/countries/:codeOrSlug/plans ──────────────────────────────
 
 router.get(
-  "/countries/:code/plans",
+  "/countries/:codeOrSlug/plans",
   cacheMiddleware(),
   asyncHandler(async (req: Request, res: Response) => {
-    const code = (req.params.code as string).toUpperCase();
+    const param = req.params.codeOrSlug as string;
+
+    const country = await prisma.country.findFirst({
+      where: {
+        OR: [{ code: param.toUpperCase() }, { slug: param.toLowerCase() }],
+      },
+      select: { code: true },
+    });
+
+    if (!country) {
+      const response: ApiResponse = {
+        success: false,
+        error: `Country "${param}" not found`,
+      };
+      res.status(404).json(response);
+      return;
+    }
+
+    const code = country.code;
 
     const plans = await prisma.plan.findMany({
       where: {
@@ -60,20 +78,22 @@ router.get(
   })
 );
 
-// ─── GET /api/regions/:slug/plans ────────────────────────────────
+// ─── GET /api/regions/:slugOrCode/plans ────────────────────────────────
 // Returns multi-country plans that cover a region.
 // A plan counts as a "region plan" if its coverages include at
 // least half of the region's countries (e.g. 22/44 for Europe).
 
 router.get(
-  "/regions/:slug/plans",
+  "/regions/:slugOrCode/plans",
   cacheMiddleware(),
   asyncHandler(async (req: Request, res: Response) => {
-    const slug = req.params.slug as string;
+    const param = req.params.slugOrCode as string;
 
     // 1. Find region + all its country codes
-    const region = await prisma.region.findUnique({
-      where: { slug },
+    const region = await prisma.region.findFirst({
+      where: {
+        OR: [{ slug: param.toLowerCase() }, { code: param.toUpperCase() }],
+      },
       include: {
         countries: { select: { code: true } },
       },
@@ -82,7 +102,7 @@ router.get(
     if (!region) {
       const response: ApiResponse = {
         success: false,
-        error: `Region "${slug}" not found`,
+        error: `Region "${param}" not found`,
       };
       res.status(404).json(response);
       return;
