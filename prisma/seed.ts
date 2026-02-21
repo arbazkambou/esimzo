@@ -122,7 +122,7 @@ async function main() {
 
   for (const [code, name] of entries) {
     const upperCode = code.toUpperCase();
-    const flag = `https://flagcdn.com/w320/${code}.png`;
+    const flag = `https://flagcdn.com/${code}.svg`;
     const slug = slugify(name);
     const regionCode = COUNTRY_TO_REGION[upperCode];
     const regionId = regionCode ? regionIdMap[regionCode] : undefined;
