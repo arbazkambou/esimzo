@@ -36,7 +36,7 @@ export const yaaloAdapter: ProviderAdapter = {
     name: "Yaalo",
     slug: PROVIDER_SLUG,
     info: "Yaalo provides affordable international eSIM plans.",
-    image: null,
+    image: "https://wsacvimipplrlvoyawam.supabase.co/storage/v1/object/public/assets/providers-logos/yaalo.png",
     certified: true,
   }),
 

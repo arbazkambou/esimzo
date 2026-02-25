@@ -100,7 +100,7 @@ export const voyeglobalAdapter: ProviderAdapter = {
     name: "VoyeGlobal",
     slug: PROVIDER_SLUG,
     info: "VoyeGlobal provides global eSIM data plans across multiple regions.",
-    image: null,
+    image: "https://wsacvimipplrlvoyawam.supabase.co/storage/v1/object/public/assets/providers-logos/voyeglobal.png",
     certified: true,
   }),
 

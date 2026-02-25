@@ -147,7 +147,7 @@ export const esimcardAdapter: ProviderAdapter = {
     name: "eSIM Card",
     slug: PROVIDER_SLUG,
     info: "eSIM Card offers global connectivity with flexible data plans.",
-    image: null,
+    image: "https://wsacvimipplrlvoyawam.supabase.co/storage/v1/object/public/assets/providers-logos/esimcard.png",
     certified: true,
   }),
 

@@ -108,7 +108,7 @@ export const airaloAdapter: ProviderAdapter = {
     name: "Airalo",
     slug: PROVIDER_SLUG,
     info: "Airalo offers affordable eSIMs for 200+ countries and regions worldwide.",
-    image: null,
+    image: "https://wsacvimipplrlvoyawam.supabase.co/storage/v1/object/public/assets/providers-logos/airalo.png",
     certified: true,
   }),
 

@@ -108,7 +108,7 @@ export const yesimAdapter: ProviderAdapter = {
     name: "Yesim",
     slug: PROVIDER_SLUG,
     info: "Yesim offers eSIM data plans for 200+ countries with simple pricing.",
-    image: null,
+    image: "https://wsacvimipplrlvoyawam.supabase.co/storage/v1/object/public/assets/providers-logos/yesim.png",
     certified: true,
   }),
 
