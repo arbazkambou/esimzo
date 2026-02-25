@@ -5,20 +5,18 @@ import { asyncHandler, ApiResponse } from "../types";
 // ─── GET /api/plans — browse / filter / sort ─────────────────────
 //
 // Query params:
-//   ?country=pk          — filter by country code in coverages
-//   ?provider=airalo     — filter by provider slug
-//   ?minData=1024        — minimum capacity in MB
-//   ?maxData=10240       — maximum capacity in MB
-//   ?minPrice=5          — minimum USD price
-//   ?maxPrice=30         — maximum USD price
-//   ?minDays=7           — minimum validity in days
-//   ?maxDays=30          — maximum validity in days
-//   ?has5g=true          — only 5G plans
-//   ?unlimited=true      — only unlimited plans (capacity = 0)
+//   ?country=south-africa — filter by country slug in coverages
+//   ?provider=airalo      — filter by provider slug
+//   ?minData=1024         — minimum capacity in MB
+//   ?maxData=10240        — maximum capacity in MB
+//   ?minPrice=5           — minimum USD price
+//   ?maxPrice=30          — maximum USD price
+//   ?minDays=7            — minimum validity in days
+//   ?maxDays=30           — maximum validity in days
+//   ?has5g=true           — only 5G plans
+//   ?unlimited=true       — only unlimited plans (capacity = 0)
 //   ?sort=price|data|period  (default: price)
 //   ?order=asc|desc         (default: asc)
-//   ?page=1              — pagination
-//   ?limit=20            — items per page (max 100)
 
 export const getPlans = asyncHandler(
   async (req: Request, res: Response) => {
@@ -35,14 +33,7 @@ export const getPlans = asyncHandler(
       unlimited,
       sort = "price",
       order = "asc",
-      page = "1",
-      limit = "20",
     } = req.query as Record<string, string | undefined>;
-
-    // Pagination
-    const pageNum = Math.max(1, parseInt(page || "1", 10));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit || "20", 10)));
-    const skip = (pageNum - 1) * limitNum;
 
     // Build where clause
     const where: any = {};
@@ -53,7 +44,11 @@ export const getPlans = asyncHandler(
         where: { slug: provider },
         select: { id: true },
       });
-      if (found) where.providerId = found.id;
+      if (found) {
+        where.providerId = found.id;
+      } else {
+        where.id = "__no_match__";
+      }
     }
 
     // Price filter
@@ -75,11 +70,21 @@ export const getPlans = asyncHandler(
     // Feature filters
     if (has5g === "true") where.has5G = true;
 
-    // Country filter (search inside coverages JSON array)
+    // Country filter (look up slug → code, then search coverages)
     if (country) {
-      where.coverages = {
-        array_contains: [{ code: country.toUpperCase() }],
-      };
+      const foundCountry = await prisma.country.findUnique({
+        where: { slug: country },
+        select: { code: true },
+      });
+
+      if (foundCountry) {
+        where.coverages = {
+          array_contains: [{ code: foundCountry.code }],
+        };
+      } else {
+        // Invalid slug → force empty result
+        where.id = "__no_match__";
+      }
     }
 
     // Sort mapping
@@ -90,30 +95,20 @@ export const getPlans = asyncHandler(
     };
     const orderBy = sortMap[sort || "price"] || { usdPrice: "asc" };
 
-    // Query plans + count in parallel
-    const [plans, total] = await Promise.all([
-      prisma.plan.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limitNum,
-        include: {
-          provider: {
-            select: { name: true, slug: true, image: true },
-          },
+    // Query all matching plans
+    const plans = await prisma.plan.findMany({
+      where,
+      orderBy,
+      include: {
+        provider: {
+          select: { name: true, slug: true, image: true },
         },
-      }),
-      prisma.plan.count({ where }),
-    ]);
+      },
+    });
 
     const response: ApiResponse = {
       success: true,
       data: plans,
-      meta: {
-        page: pageNum,
-        limit: limitNum,
-        total,
-      },
     };
 
     res.json(response);
