@@ -13,14 +13,20 @@ function slugify(name: string): string {
 
 // ─── Region definitions ──────────────────────────────────────────
 
+const SUPABASE_ASSETS = "https://wsacvimipplrlvoyawam.supabase.co/storage/v1/object/public/assets";
+
 const REGIONS = [
-  { code: "AF", name: "Africa", flag: "🌍" },
-  { code: "AN", name: "Antarctica", flag: "🌏" },
-  { code: "AS", name: "Asia", flag: "🌏" },
-  { code: "EU", name: "Europe", flag: "🌍" },
-  { code: "NA", name: "North America", flag: "🌎" },
-  { code: "OC", name: "Oceania", flag: "🌏" },
-  { code: "SA", name: "South America", flag: "🌎" },
+  { code: "AF", name: "Africa", flag: `${SUPABASE_ASSETS}/africa.svg` },
+  { code: "AS", name: "Asia", flag: `${SUPABASE_ASSETS}/asia.svg` },
+  { code: "BK", name: "Balkans", flag: `${SUPABASE_ASSETS}/balkans.svg` },
+  { code: "CB", name: "Caribbean", flag: `${SUPABASE_ASSETS}/caribbean.svg` },
+  { code: "EU", name: "Europe", flag: `${SUPABASE_ASSETS}/europe.svg` },
+  { code: "GC", name: "GCC Middle East", flag: `${SUPABASE_ASSETS}/gcc-middle-east.svg` },
+  { code: "LA", name: "Latin America", flag: `${SUPABASE_ASSETS}/latin-america.svg` },
+  { code: "ME", name: "Middle East", flag: `${SUPABASE_ASSETS}/middle-east.svg` },
+  { code: "NA", name: "North America", flag: `${SUPABASE_ASSETS}/north-america.svg` },
+  { code: "OC", name: "Oceania", flag: `${SUPABASE_ASSETS}/oceania.svg` },
+  { code: "SA", name: "South America", flag: `${SUPABASE_ASSETS}/south-america.svg` },
 ];
 
 // ─── Country → Region mapping (ISO alpha-2 → region code) ───────
@@ -32,44 +38,52 @@ const COUNTRY_TO_REGION: Record<string, string> = {
   EH: "AF", ER: "AF", ET: "AF", GA: "AF", GH: "AF", GM: "AF", GN: "AF",
   GQ: "AF", GW: "AF", KE: "AF", KM: "AF", LR: "AF", LS: "AF", LY: "AF",
   MA: "AF", MG: "AF", ML: "AF", MR: "AF", MU: "AF", MW: "AF", MZ: "AF",
-  NA: "AF", NE: "AF", NG: "AF", RE: "AF", RW: "AF", SC: "AF", SD: "AF",
+  NE: "AF", NG: "AF", RE: "AF", RW: "AF", SC: "AF", SD: "AF",
   SL: "AF", SN: "AF", SO: "AF", SS: "AF", ST: "AF", SZ: "AF", TD: "AF",
   TG: "AF", TN: "AF", TZ: "AF", UG: "AF", YT: "AF", ZA: "AF", ZM: "AF",
   ZW: "AF",
 
-  // ── Antarctica ──
-  AQ: "AN", BV: "AN", GS: "AN", HM: "AN", TF: "AN",
-
   // ── Asia ──
-  AE: "AS", AF: "AS", AM: "AS", AZ: "AS", BD: "AS", BH: "AS", BN: "AS",
-  BT: "AS", CN: "AS", GE: "AS", HK: "AS", ID: "AS", IL: "AS", IN: "AS",
-  IO: "AS", IQ: "AS", IR: "AS", JO: "AS", JP: "AS", KG: "AS", KH: "AS",
-  KP: "AS", KR: "AS", KW: "AS", KZ: "AS", LA: "AS", LB: "AS", LK: "AS",
-  MM: "AS", MN: "AS", MO: "AS", MV: "AS", MY: "AS", NP: "AS", OM: "AS",
-  PH: "AS", PK: "AS", PS: "AS", QA: "AS", SA: "AS", SG: "AS", SY: "AS",
-  TH: "AS", TJ: "AS", TL: "AS", TM: "AS", TR: "AS", TW: "AS", UZ: "AS",
-  VN: "AS", YE: "AS",
+  AF: "AS", BD: "AS", BN: "AS", BT: "AS", CN: "AS", HK: "AS", ID: "AS",
+  IN: "AS", IO: "AS", JP: "AS", KG: "AS", KH: "AS", KP: "AS", KR: "AS",
+  KZ: "AS", LA: "AS", LK: "AS", MM: "AS", MN: "AS", MO: "AS", MV: "AS",
+  MY: "AS", NP: "AS", PH: "AS", PK: "AS", SG: "AS", TH: "AS", TJ: "AS",
+  TL: "AS", TM: "AS", TW: "AS", UZ: "AS", VN: "AS",
+
+  // ── Balkans ──
+  AL: "BK", BA: "BK", BG: "BK", HR: "BK", ME: "BK", MK: "BK", RO: "BK",
+  RS: "BK", SI: "BK", XK: "BK", GR: "BK",
+
+  // ── Caribbean ──
+  AG: "CB", AI: "CB", AW: "CB", BB: "CB", BL: "CB", BQ: "CB", BS: "CB",
+  CU: "CB", CW: "CB", DM: "CB", DO: "CB", GD: "CB", GP: "CB", HT: "CB",
+  JM: "CB", KN: "CB", KY: "CB", LC: "CB", MF: "CB", MQ: "CB", MS: "CB",
+  PR: "CB", SX: "CB", TC: "CB", TT: "CB", VC: "CB", VG: "CB", VI: "CB",
 
   // ── Europe ──
-  AD: "EU", AL: "EU", AT: "EU", AX: "EU", BA: "EU", BE: "EU", BG: "EU",
-  BY: "EU", CH: "EU", CY: "EU", CZ: "EU", DE: "EU", DK: "EU", EE: "EU",
-  ES: "EU", FI: "EU", FO: "EU", FR: "EU", GB: "EU", GG: "EU", GI: "EU",
-  GR: "EU", HR: "EU", HU: "EU", IE: "EU", IM: "EU", IS: "EU", IT: "EU",
-  JE: "EU", LI: "EU", LT: "EU", LU: "EU", LV: "EU", MC: "EU", MD: "EU",
-  ME: "EU", MK: "EU", MT: "EU", NL: "EU", NO: "EU", PL: "EU", PT: "EU",
-  RO: "EU", RS: "EU", RU: "EU", SE: "EU", SI: "EU", SJ: "EU", SK: "EU",
-  SM: "EU", UA: "EU", VA: "EU", XK: "EU",
+  AD: "EU", AT: "EU", AX: "EU", BE: "EU", BY: "EU", CH: "EU", CY: "EU",
+  CZ: "EU", DE: "EU", DK: "EU", EE: "EU", ES: "EU", FI: "EU", FO: "EU",
+  FR: "EU", GB: "EU", GG: "EU", GI: "EU", HU: "EU", IE: "EU", IM: "EU",
+  IS: "EU", IT: "EU", JE: "EU", LI: "EU", LT: "EU", LU: "EU", LV: "EU",
+  MC: "EU", MD: "EU", MT: "EU", NL: "EU", NO: "EU", PL: "EU", PT: "EU",
+  RU: "EU", SE: "EU", SJ: "EU", SK: "EU", SM: "EU", UA: "EU", VA: "EU",
+
+  // ── GCC Middle East ──
+  AE: "GC", BH: "GC", KW: "GC", OM: "GC", QA: "GC", SA: "GC",
+
+  // ── Latin America ──
+  BZ: "LA", CR: "LA", GT: "LA", HN: "LA", MX: "LA", NI: "LA", PA: "LA",
+  SV: "LA",
+
+  // ── Middle East ──
+  AM: "ME", AZ: "ME", GE: "ME", IL: "ME", IQ: "ME", IR: "ME", JO: "ME",
+  LB: "ME", PS: "ME", SY: "ME", TR: "ME", YE: "ME",
 
   // ── North America ──
-  AG: "NA", AI: "NA", AW: "NA", BB: "NA", BL: "NA", BM: "NA", BQ: "NA",
-  BS: "NA", BZ: "NA", CA: "NA", CR: "NA", CU: "NA", CW: "NA", DM: "NA",
-  DO: "NA", GD: "NA", GL: "NA", GP: "NA", GT: "NA", HN: "NA", HT: "NA",
-  JM: "NA", KN: "NA", KY: "NA", LC: "NA", MF: "NA", MQ: "NA", MS: "NA",
-  MX: "NA", NI: "NA", PA: "NA", PM: "NA", PR: "NA", SV: "NA", SX: "NA",
-  TC: "NA", TT: "NA", US: "NA", VC: "NA", VG: "NA", VI: "NA",
+  BM: "NA", CA: "NA", GL: "NA", PM: "NA", US: "NA",
 
   // ── Oceania ──
-  AS: "OC", AU: "OC", CC: "OC", CK: "OC", CX: "OC", FJ: "OC", FM: "OC",
+  AU: "OC", CC: "OC", CK: "OC", CX: "OC", FJ: "OC", FM: "OC",
   GU: "OC", KI: "OC", MH: "OC", MP: "OC", NC: "OC", NF: "OC", NR: "OC",
   NU: "OC", NZ: "OC", PF: "OC", PG: "OC", PN: "OC", PW: "OC", SB: "OC",
   TK: "OC", TO: "OC", TV: "OC", UM: "OC", VU: "OC", WF: "OC", WS: "OC",
