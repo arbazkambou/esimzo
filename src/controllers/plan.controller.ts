@@ -2,172 +2,222 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { asyncHandler, ApiResponse } from "../types";
 
-// ─── GET /api/plans — browse / filter / sort ─────────────────────
-//
-// Query params:
-//   ?country=south-africa — filter by country slug in coverages
-//   ?provider=airalo      — filter by provider slug
-//   ?minData=1024         — minimum capacity in MB
-//   ?maxData=10240        — maximum capacity in MB
-//   ?minPrice=5           — minimum USD price
-//   ?maxPrice=30          — maximum USD price
-//   ?minDays=7            — minimum validity in days
-//   ?maxDays=30           — maximum validity in days
-//   ?has5g=true           — only 5G plans
-//   ?unlimited=true       — only unlimited plans (capacity = 0)
-//   ?region=europe        — plans where ≥30% of the region's countries are covered
-//   ?global=true          — plans with ≥70 countries in coverages
-//   ?sort=price|data|period  (default: price)
-//   ?order=asc|desc         (default: asc)
+// ─── Shared: plan SELECT columns for raw SQL queries ─────────────
+
+const PLAN_COLUMNS = `
+  p.id,
+  p.name,
+  p.slug,
+  p.usd_price        AS "usdPrice",
+  p.prices,
+  p.price_info       AS "priceInfo",
+  p.capacity,
+  p.capacity_info    AS "capacityInfo",
+  p.period,
+  p.validity_info    AS "validityInfo",
+  p.speed_limit      AS "speedLimit",
+  p.reduced_speed    AS "reducedSpeed",
+  p.possible_throttling AS "possibleThrottling",
+  p.is_low_latency   AS "isLowLatency",
+  p.has_5g           AS "has5G",
+  p.tethering,
+  p.can_top_up       AS "canTopUp",
+  p.phone_number     AS "phoneNumber",
+  p.subscription,
+  p.subscription_period AS "subscriptionPeriod",
+  p.pay_as_you_go    AS "payAsYouGo",
+  p.new_user_only    AS "newUserOnly",
+  p.is_consecutive   AS "isConsecutive",
+  p.e_kyc            AS "eKYC",
+  p.telephony,
+  p.coverages,
+  p.coverage_count   AS "coverageCount",
+  p.internet_breakouts AS "internetBreakouts",
+  p.additional_info  AS "additionalInfo",
+  p.provider_id      AS "providerId",
+  p.created_at       AS "createdAt",
+  p.updated_at       AS "updatedAt",
+  json_build_object(
+    'name', pr.name,
+    'slug', pr.slug,
+    'image', pr.image
+  ) AS provider`;
+
+// ─── Shared: provider include for Prisma queries ─────────────────
+
+const PROVIDER_INCLUDE = {
+  provider: {
+    select: { name: true, slug: true, image: true },
+  },
+};
+
+// ─── Shared: resolve provider slug → id ──────────────────────────
+
+async function resolveProviderId(slug: string): Promise<string | null> {
+  const found = await prisma.provider.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  return found?.id ?? null;
+}
+
+// ─── GET /api/plans — all plans sorted by price ──────────────────
 
 export const getPlans = asyncHandler(
+  async (_req: Request, res: Response) => {
+    const plans = await prisma.plan.findMany({
+      orderBy: { usdPrice: "asc" },
+      include: PROVIDER_INCLUDE,
+    });
+
+    res.json({ success: true, data: plans } as ApiResponse);
+  }
+);
+
+// ─── GET /api/plans/country/:countrySlug ─────────────────────────
+// ─── GET /api/plans/country/:countrySlug/provider/:providerSlug ──
+
+export const getCountryPlans = asyncHandler(
   async (req: Request, res: Response) => {
-    const {
-      country,
-      provider,
-      minData,
-      maxData,
-      minPrice,
-      maxPrice,
-      minDays,
-      maxDays,
-      has5g,
-      unlimited,
-      region,
-      global: globalFilter,
-      sort = "price",
-      order = "asc",
-    } = req.query as Record<string, string | undefined>;
+    const countrySlug = req.params.countrySlug as string;
+    const providerSlug = req.params.providerSlug as string | undefined;
 
-    // Build where clause
-    const where: any = {};
+    const foundCountry = await prisma.country.findUnique({
+      where: { slug: countrySlug },
+      select: { code: true },
+    });
 
-    // Provider filter
-    if (provider) {
-      const found = await prisma.provider.findUnique({
-        where: { slug: provider },
-        select: { id: true },
-      });
-      if (found) {
-        where.providerId = found.id;
-      } else {
-        where.id = "__no_match__";
-      }
-    }
-
-    // Price filter
-    if (minPrice) where.usdPrice = { ...where.usdPrice, gte: parseFloat(minPrice) };
-    if (maxPrice) where.usdPrice = { ...where.usdPrice, lte: parseFloat(maxPrice) };
-
-    // Capacity filter
-    if (unlimited === "true") {
-      where.capacity = 0;
-    } else {
-      if (minData) where.capacity = { ...where.capacity, gte: parseInt(minData, 10) };
-      if (maxData) where.capacity = { ...where.capacity, lte: parseInt(maxData, 10) };
-    }
-
-    // Duration filter
-    if (minDays) where.period = { ...where.period, gte: parseInt(minDays, 10) };
-    if (maxDays) where.period = { ...where.period, lte: parseInt(maxDays, 10) };
-
-    // Feature filters
-    if (has5g === "true") where.has5G = true;
-
-    // Country filter (look up slug → code, then search coverages)
-    if (country) {
-      const foundCountry = await prisma.country.findUnique({
-        where: { slug: country },
-        select: { code: true },
-      });
-
-      if (foundCountry) {
-        where.coverages = {
-          array_contains: [{ code: foundCountry.code }],
-        };
-      } else {
-        where.id = "__no_match__";
-      }
-    }
-
-    // Global filter — DB-level: coverageCount >= 70
-    if (globalFilter === "true") {
-      where.coverageCount = { gte: 70 };
-    }
-
-    // Sort mapping
-    const sortCol: Record<string, string> = {
-      price: "usd_price",
-      data: "capacity",
-      period: "period",
-    };
-    const sortColumn = sortCol[sort || "price"] || "usd_price";
-    const sortOrder = order === "desc" ? "desc" : "asc";
-
-    // ─── Region filter: push entire check to PostgreSQL ──────────
-    if (region) {
-      const foundRegion = await prisma.region.findUnique({
-        where: { slug: region },
-        select: { countries: { select: { code: true } } },
-      });
-
-      if (!foundRegion || foundRegion.countries.length === 0) {
-        res.json({ success: true, data: [] } as ApiResponse);
-        return;
-      }
-
-      const regionCodes = foundRegion.countries.map((c) => c.code);
-      const minMatch = Math.ceil(regionCodes.length * 0.3);
-
-      // Raw SQL: count matching coverage codes in PostgreSQL
-      const plans = await prisma.$queryRawUnsafe<any[]>(
-        `SELECT p.*,
-                json_build_object(
-                  'name', pr.name,
-                  'slug', pr.slug,
-                  'image', pr.image
-                ) AS provider
-         FROM plans p
-         JOIN providers pr ON p.provider_id = pr.id
-         WHERE p.coverage_count < 70
-           AND (
-             SELECT COUNT(*)
-             FROM jsonb_array_elements(p.coverages) AS elem
-             WHERE elem->>'code' = ANY($1::text[])
-           ) >= $2
-         ORDER BY p.${sortColumn} ${sortOrder}`,
-        regionCodes,
-        minMatch
-      );
-
-      res.json({ success: true, data: plans } as ApiResponse);
+    if (!foundCountry) {
+      res.json({ success: true, data: [] } as ApiResponse);
       return;
     }
 
-    // ─── Standard query (no region filter) ───────────────────────
-    const orderByMap: Record<string, any> = {
-      price: { usdPrice: order },
-      data: { capacity: order },
-      period: { period: order },
+    const where: any = {
+      coverages: { array_contains: [{ code: foundCountry.code }] },
     };
-    const orderBy = orderByMap[sort || "price"] || { usdPrice: "asc" };
+
+    if (providerSlug) {
+      const providerId = await resolveProviderId(providerSlug);
+      if (!providerId) {
+        res.json({ success: true, data: [] } as ApiResponse);
+        return;
+      }
+      where.providerId = providerId;
+    }
 
     const plans = await prisma.plan.findMany({
       where,
-      orderBy,
-      include: {
-        provider: {
-          select: { name: true, slug: true, image: true },
-        },
-      },
+      orderBy: { usdPrice: "asc" },
+      include: PROVIDER_INCLUDE,
     });
 
-    const response: ApiResponse = {
-      success: true,
-      data: plans,
+    res.json({ success: true, data: plans } as ApiResponse);
+  }
+);
+
+// ─── GET /api/plans/region/:regionSlug ───────────────────────────
+// ─── GET /api/plans/region/:regionSlug/provider/:providerSlug ────
+
+export const getRegionPlans = asyncHandler(
+  async (req: Request, res: Response) => {
+    const regionSlug = req.params.regionSlug as string;
+    const providerSlug = req.params.providerSlug as string | undefined;
+
+    const foundRegion = await prisma.region.findUnique({
+      where: { slug: regionSlug },
+      select: { countries: { select: { code: true } } },
+    });
+
+    if (!foundRegion || foundRegion.countries.length === 0) {
+      res.json({ success: true, data: [] } as ApiResponse);
+      return;
+    }
+
+    const regionCodes = foundRegion.countries.map((c) => c.code);
+    const minMatch = Math.ceil(regionCodes.length * 0.3);
+
+    // Optional provider filter
+    let providerClause = "";
+    const params: any[] = [regionCodes, minMatch];
+
+    if (providerSlug) {
+      const providerId = await resolveProviderId(providerSlug);
+      if (!providerId) {
+        res.json({ success: true, data: [] } as ApiResponse);
+        return;
+      }
+      params.push(providerId);
+      providerClause = `AND p.provider_id = $3`;
+    }
+
+    const plans = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT ${PLAN_COLUMNS}
+       FROM plans p
+       JOIN providers pr ON p.provider_id = pr.id
+       WHERE p.coverage_count < 70
+         AND (
+           SELECT COUNT(*)
+           FROM jsonb_array_elements(p.coverages) AS elem
+           WHERE elem->>'code' = ANY($1::text[])
+         ) >= $2
+         ${providerClause}
+       ORDER BY p.usd_price ASC`,
+      ...params
+    );
+
+    res.json({ success: true, data: plans } as ApiResponse);
+  }
+);
+
+// ─── GET /api/plans/provider/:providerSlug ───────────────────────
+
+export const getProviderPlans = asyncHandler(
+  async (req: Request, res: Response) => {
+    const providerSlug = req.params.providerSlug as string;
+
+    const providerId = await resolveProviderId(providerSlug);
+    if (!providerId) {
+      res.json({ success: true, data: [] } as ApiResponse);
+      return;
+    }
+
+    const plans = await prisma.plan.findMany({
+      where: { providerId },
+      orderBy: { usdPrice: "asc" },
+      include: PROVIDER_INCLUDE,
+    });
+
+    res.json({ success: true, data: plans } as ApiResponse);
+  }
+);
+
+// ─── GET /api/plans/global ───────────────────────────────────────
+// ─── GET /api/plans/global/provider/:providerSlug ────────────────
+
+export const getGlobalPlans = asyncHandler(
+  async (req: Request, res: Response) => {
+    const providerSlug = req.params.providerSlug as string | undefined;
+
+    const where: any = {
+      coverageCount: { gte: 70 },
     };
 
-    res.json(response);
+    if (providerSlug) {
+      const providerId = await resolveProviderId(providerSlug);
+      if (!providerId) {
+        res.json({ success: true, data: [] } as ApiResponse);
+        return;
+      }
+      where.providerId = providerId;
+    }
+
+    const plans = await prisma.plan.findMany({
+      where,
+      orderBy: { usdPrice: "asc" },
+      include: PROVIDER_INCLUDE,
+    });
+
+    res.json({ success: true, data: plans } as ApiResponse);
   }
 );
 
@@ -191,19 +241,10 @@ export const comparePlans = asyncHandler(
 
     const plans = await prisma.plan.findMany({
       where: { slug: { in: slugList } },
-      include: {
-        provider: {
-          select: { name: true, slug: true, image: true },
-        },
-      },
+      include: PROVIDER_INCLUDE,
     });
 
-    const response: ApiResponse = {
-      success: true,
-      data: plans,
-    };
-
-    res.json(response);
+    res.json({ success: true, data: plans } as ApiResponse);
   }
 );
 
@@ -231,11 +272,6 @@ export const getPlanBySlug = asyncHandler(
       return;
     }
 
-    const response: ApiResponse = {
-      success: true,
-      data: plan,
-    };
-
-    res.json(response);
+    res.json({ success: true, data: plan } as ApiResponse);
   }
 );
