@@ -15,6 +15,8 @@ import { asyncHandler, ApiResponse } from "../types";
 //   ?maxDays=30           — maximum validity in days
 //   ?has5g=true           — only 5G plans
 //   ?unlimited=true       — only unlimited plans (capacity = 0)
+//   ?region=europe        — plans where ≥50% of coverages are in that region
+//   ?global=true          — plans not dominated (≥50%) by any single region
 //   ?sort=price|data|period  (default: price)
 //   ?order=asc|desc         (default: asc)
 
@@ -31,6 +33,8 @@ export const getPlans = asyncHandler(
       maxDays,
       has5g,
       unlimited,
+      region,
+      global: globalFilter,
       sort = "price",
       order = "asc",
     } = req.query as Record<string, string | undefined>;
@@ -96,7 +100,7 @@ export const getPlans = asyncHandler(
     const orderBy = sortMap[sort || "price"] || { usdPrice: "asc" };
 
     // Query all matching plans
-    const plans = await prisma.plan.findMany({
+    let plans = await prisma.plan.findMany({
       where,
       orderBy,
       include: {
@@ -105,6 +109,51 @@ export const getPlans = asyncHandler(
         },
       },
     });
+
+    // ─── Post-filters: region & global ───────────────────────────
+    // These require inspecting the JSON coverages array, so they
+    // run in-memory after the DB query.
+
+    if (region) {
+      // Look up region and its countries
+      const foundRegion = await prisma.region.findUnique({
+        where: { slug: region },
+        select: {
+          id: true,
+          countries: { select: { code: true } },
+        },
+      });
+
+      if (!foundRegion) {
+        res.json({ success: true, data: [] } as ApiResponse);
+        return;
+      }
+
+      const regionCodes = new Set(foundRegion.countries.map((c) => c.code));
+      const regionTotal = regionCodes.size;
+
+      // Keep plans where ≥30% of the region's countries appear in coverages
+      // Exclude global plans (≥70 countries) — those belong in the global filter
+      plans = plans.filter((plan) => {
+        const coverages = plan.coverages as Array<{ code?: string }>;
+        if (!coverages || coverages.length === 0) return false;
+        if (coverages.length >= 70) return false;
+
+        const matchCount = coverages.filter(
+          (c) => c.code && regionCodes.has(c.code)
+        ).length;
+
+        return matchCount / regionTotal >= 0.3;
+      });
+    }
+
+    if (globalFilter === "true") {
+      // Global plans = plans with ≥70 countries in their coverages
+      plans = plans.filter((plan) => {
+        const coverages = plan.coverages as Array<{ code?: string }>;
+        return coverages && coverages.length >= 70;
+      });
+    }
 
     const response: ApiResponse = {
       success: true,
