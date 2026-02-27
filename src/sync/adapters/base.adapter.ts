@@ -87,6 +87,7 @@ export function defaultPlan(): NormalizedPlan {
     eKYC: null,
     telephony: null,
     coverages: [],
+    coverageCount: 0,
     internetBreakouts: [],
     additionalInfo: null,
   };

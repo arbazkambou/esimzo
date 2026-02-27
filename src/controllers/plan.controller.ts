@@ -15,8 +15,8 @@ import { asyncHandler, ApiResponse } from "../types";
 //   ?maxDays=30           — maximum validity in days
 //   ?has5g=true           — only 5G plans
 //   ?unlimited=true       — only unlimited plans (capacity = 0)
-//   ?region=europe        — plans where ≥50% of coverages are in that region
-//   ?global=true          — plans not dominated (≥50%) by any single region
+//   ?region=europe        — plans where ≥30% of the region's countries are covered
+//   ?global=true          — plans with ≥70 countries in coverages
 //   ?sort=price|data|period  (default: price)
 //   ?order=asc|desc         (default: asc)
 
@@ -86,21 +86,73 @@ export const getPlans = asyncHandler(
           array_contains: [{ code: foundCountry.code }],
         };
       } else {
-        // Invalid slug → force empty result
         where.id = "__no_match__";
       }
     }
 
+    // Global filter — DB-level: coverageCount >= 70
+    if (globalFilter === "true") {
+      where.coverageCount = { gte: 70 };
+    }
+
     // Sort mapping
-    const sortMap: Record<string, any> = {
+    const sortCol: Record<string, string> = {
+      price: "usd_price",
+      data: "capacity",
+      period: "period",
+    };
+    const sortColumn = sortCol[sort || "price"] || "usd_price";
+    const sortOrder = order === "desc" ? "desc" : "asc";
+
+    // ─── Region filter: push entire check to PostgreSQL ──────────
+    if (region) {
+      const foundRegion = await prisma.region.findUnique({
+        where: { slug: region },
+        select: { countries: { select: { code: true } } },
+      });
+
+      if (!foundRegion || foundRegion.countries.length === 0) {
+        res.json({ success: true, data: [] } as ApiResponse);
+        return;
+      }
+
+      const regionCodes = foundRegion.countries.map((c) => c.code);
+      const minMatch = Math.ceil(regionCodes.length * 0.3);
+
+      // Raw SQL: count matching coverage codes in PostgreSQL
+      const plans = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT p.*,
+                json_build_object(
+                  'name', pr.name,
+                  'slug', pr.slug,
+                  'image', pr.image
+                ) AS provider
+         FROM plans p
+         JOIN providers pr ON p.provider_id = pr.id
+         WHERE p.coverage_count < 70
+           AND (
+             SELECT COUNT(*)
+             FROM jsonb_array_elements(p.coverages) AS elem
+             WHERE elem->>'code' = ANY($1::text[])
+           ) >= $2
+         ORDER BY p.${sortColumn} ${sortOrder}`,
+        regionCodes,
+        minMatch
+      );
+
+      res.json({ success: true, data: plans } as ApiResponse);
+      return;
+    }
+
+    // ─── Standard query (no region filter) ───────────────────────
+    const orderByMap: Record<string, any> = {
       price: { usdPrice: order },
       data: { capacity: order },
       period: { period: order },
     };
-    const orderBy = sortMap[sort || "price"] || { usdPrice: "asc" };
+    const orderBy = orderByMap[sort || "price"] || { usdPrice: "asc" };
 
-    // Query all matching plans
-    let plans = await prisma.plan.findMany({
+    const plans = await prisma.plan.findMany({
       where,
       orderBy,
       include: {
@@ -109,51 +161,6 @@ export const getPlans = asyncHandler(
         },
       },
     });
-
-    // ─── Post-filters: region & global ───────────────────────────
-    // These require inspecting the JSON coverages array, so they
-    // run in-memory after the DB query.
-
-    if (region) {
-      // Look up region and its countries
-      const foundRegion = await prisma.region.findUnique({
-        where: { slug: region },
-        select: {
-          id: true,
-          countries: { select: { code: true } },
-        },
-      });
-
-      if (!foundRegion) {
-        res.json({ success: true, data: [] } as ApiResponse);
-        return;
-      }
-
-      const regionCodes = new Set(foundRegion.countries.map((c) => c.code));
-      const regionTotal = regionCodes.size;
-
-      // Keep plans where ≥30% of the region's countries appear in coverages
-      // Exclude global plans (≥70 countries) — those belong in the global filter
-      plans = plans.filter((plan) => {
-        const coverages = plan.coverages as Array<{ code?: string }>;
-        if (!coverages || coverages.length === 0) return false;
-        if (coverages.length >= 70) return false;
-
-        const matchCount = coverages.filter(
-          (c) => c.code && regionCodes.has(c.code)
-        ).length;
-
-        return matchCount / regionTotal >= 0.3;
-      });
-    }
-
-    if (globalFilter === "true") {
-      // Global plans = plans with ≥70 countries in their coverages
-      plans = plans.filter((plan) => {
-        const coverages = plan.coverages as Array<{ code?: string }>;
-        return coverages && coverages.length >= 70;
-      });
-    }
 
     const response: ApiResponse = {
       success: true,

@@ -107,6 +107,7 @@ model Plan {
   // ── Complex / Nested (JSON) ──
   telephony          Json?                            // { dialingCode, voice, sms }
   coverages          Json     @default("[]")          // [{ name, code, networks }]
+  coverageCount      Int      @default(0) @map("coverage_count")
   internetBreakouts  Json     @default("[]") @map("internet_breakouts") // [{ country }]
 
   // ── Meta ──

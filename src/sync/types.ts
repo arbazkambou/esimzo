@@ -44,6 +44,7 @@ export interface NormalizedPlan {
   // Complex / Nested
   telephony: unknown | null;
   coverages: unknown[];
+  coverageCount: number;
   internetBreakouts: unknown[];
 
   // Meta

@@ -90,6 +90,7 @@ export const syncOne = async (
           eKYC: plan.eKYC,
           telephony: plan.telephony as any,
           coverages: plan.coverages as any,
+          coverageCount: Array.isArray(plan.coverages) ? plan.coverages.length : 0,
           internetBreakouts: plan.internetBreakouts as any,
           additionalInfo: plan.additionalInfo,
           providerId: provider.id,
